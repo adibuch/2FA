@@ -1,11 +1,12 @@
+import os
+import tempfile
+import pyotp
+import qrcode
 from flask import Flask, request, render_template, redirect, url_for, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
-from models import db, User
-import pyotp
-import qrcode
-import tempfile
 from flask_talisman import Talisman
+from models import db, User
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
@@ -27,21 +28,30 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+
+        print(f"Attempting to register user with username: '{username}'")
+        
+        # בדוק אם שם המשתמש כבר קיים
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            print(f"User with username '{username}' already exists.")  # הודעת דיאגנוסטיקה
+            return render_template('register.html', error="שם משתמש זה כבר בשימוש")
+
         otp_secret = pyotp.random_base32()
         user = User(username=username, otp_secret=otp_secret)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-        
+
         # יצירת QR Code
         totp = pyotp.TOTP(user.otp_secret)
         otp_url = totp.provisioning_uri(user.username, issuer_name="2FA-Demo-App")
         qr = qrcode.make(otp_url)
-        
+
         # שמירת ה-QR Code בקובץ זמני
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
         qr.save(temp_file.name)
-        
+
         return render_template('register_done.html', qr_code=temp_file.name)
     return render_template('register.html')
 
@@ -79,7 +89,7 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return f'Hello, {current_user.username}!'
+    return render_template('dashboard.html')
 
 @app.route('/')
 def index():
@@ -92,6 +102,7 @@ def home():
 @app.route('/qr_code/<path:filename>')
 def qr_code(filename):
     return send_file(filename, mimetype='image/png')
+
 
 
 @app.route('/users')
