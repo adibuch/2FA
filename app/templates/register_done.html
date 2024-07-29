@@ -12,8 +12,8 @@
     <div class="container">
         <h1>Registration Complete</h1>
         <p>Scan the QR code below with your Google Authenticator app:</p>
-        <img src="{{ url_for('qr_code', filename=qr_code) }}" alt="QR Code">
-        <p><a href="{{ url_for('login') }}">Login</a></p>
+        <img src="{{ url_for('main.qr_code', filename=qr_code) }}" alt="QR Code">
+        <p><a href="{{ url_for('auth.login') }}"><ins>Login</ins></a></p>
     </div>
 </body>
 </html>
